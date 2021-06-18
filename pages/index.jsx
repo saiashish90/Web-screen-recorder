@@ -1,6 +1,6 @@
 import styles from "../styles/Home.module.css";
 import { useRef } from "react";
-import { startRecording, stopRecording } from "./functions/helper";
+import { startRecording, stopRecording } from "../functions/helper";
 // JSX
 export default function Home() {
   let start = useRef();
