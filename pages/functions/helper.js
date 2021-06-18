@@ -1,4 +1,5 @@
 import { injectMetadata } from "./ebml";
+const MBPS = 1000000;
 let recorder, stream;
 let constraints = {
   audio: {
@@ -9,12 +10,23 @@ let constraints = {
     sampleSize: 16,
   },
   video: {
-    width: { ideal: 1920 },
-    height: { ideal: 1080 },
+    width: 1920,
+    height: 1080,
+    frameRate: 24,
   },
 };
 // Start recording
 export async function startRecording() {
+  let [w, h] = document
+    .querySelector("#resolution")
+    .value.split("x")
+    .map((x) => {
+      return Number(x);
+    });
+  let bitrate = Number(document.querySelector("#bitrate").value);
+  console.log(w, h, bitrate);
+  constraints.video.width = w;
+  constraints.video.height = h;
   try {
     stream = await navigator.mediaDevices.getDisplayMedia(constraints);
     stream.oninactive = function () {
@@ -23,7 +35,11 @@ export async function startRecording() {
         stream.getTracks().forEach((track) => track.stop());
       }
     };
-    recorder = new MediaRecorder(stream, { mimeType: "video/webm" });
+    recorder = new MediaRecorder(stream, {
+      audioBitsPerSecond: 128000,
+      videoBitsPerSecond: bitrate * MBPS,
+      mimeType: "video/webm;codecs=vp9,vp8",
+    });
     console.log(recorder);
     const chunks = [];
     recorder.ondataavailable = (e) => {
@@ -31,6 +47,7 @@ export async function startRecording() {
     };
     recorder.onstop = async (e) => {
       let completeBlob = new Blob(chunks, { type: "video/mp4" });
+      console.log(completeBlob);
       let metaBlob = await injectMetadata(completeBlob);
       let url = URL.createObjectURL(metaBlob);
       let video = document.querySelector("#video");
@@ -47,6 +64,8 @@ export async function startRecording() {
 
 // Stop function
 export async function stopRecording() {
-  recorder.stop();
-  stream.getTracks().forEach((track) => track.stop());
+  if (recorder) {
+    recorder.stop();
+    stream.getTracks().forEach((track) => track.stop());
+  }
 }
